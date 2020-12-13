@@ -64,54 +64,54 @@
 #define PAGE_SIZE 4096
 
 struct TimerRegisters {
-    uint32_t ctlStatus;
-    uint32_t low;
-    uint32_t high;
-    uint32_t c0;
-    uint32_t c1;
-    uint32_t c2;
-    uint32_t c3;
+    uint64_t ctlStatus;
+    uint64_t low;
+    uint64_t high;
+    uint64_t c0;
+    uint64_t c1;
+    uint64_t c2;
+    uint64_t c3;
 };
 
 struct ClockRegisters {
-    uint32_t ctl;
-    uint32_t div;
+    uint64_t ctl;
+    uint64_t div;
 };
 
 struct PWMRegisters {
-    uint32_t ctl;
-    uint32_t status;
-    uint32_t dmaConf;
-    uint32_t reserved0;
-    uint32_t chn1Range;
-    uint32_t chn1Data;
-    uint32_t fifoIn;
-    uint32_t reserved1;
-    uint32_t chn2Range;
-    uint32_t chn2Data;
+    uint64_t ctl;
+    uint64_t status;
+    uint64_t dmaConf;
+    uint64_t reserved0;
+    uint64_t chn1Range;
+    uint64_t chn1Data;
+    uint64_t fifoIn;
+    uint64_t reserved1;
+    uint64_t chn2Range;
+    uint64_t chn2Data;
 };
 
 struct DMAControllBlock {
-    uint32_t transferInfo;
-    uint32_t srcAddress;
-    uint32_t dstAddress;
-    uint32_t transferLen;
-    uint32_t stride;
-    uint32_t nextCbAddress;
-    uint32_t reserved0;
-    uint32_t reserved1;
+    uint64_t transferInfo;
+    uint64_t srcAddress;
+    uint64_t dstAddress;
+    uint64_t transferLen;
+    uint64_t stride;
+    uint64_t nextCbAddress;
+    uint64_t reserved0;
+    uint64_t reserved1;
 };
 
 struct DMARegisters {
-    uint32_t ctlStatus;
-    uint32_t cbAddress;
-    uint32_t transferInfo;
-    uint32_t srcAddress;
-    uint32_t dstAddress;
-    uint32_t transferLen;
-    uint32_t stride;
-    uint32_t nextCbAddress;
-    uint32_t debug;
+    uint64_t ctlStatus;
+    uint64_t cbAddress;
+    uint64_t transferInfo;
+    uint64_t srcAddress;
+    uint64_t dstAddress;
+    uint64_t transferLen;
+    uint64_t stride;
+    uint64_t nextCbAddress;
+    uint64_t debug;
 };
 
 class Peripherals
@@ -127,13 +127,13 @@ class Peripherals
             static Peripherals instance;
             return instance;
         }
-        inline uint32_t GetPhysicalAddress(volatile void *object) const {
-            return PERIPHERALS_PHYS_BASE + (reinterpret_cast<uint32_t>(object) - reinterpret_cast<uint32_t>(peripherals));
+        inline uint64_t GetPhysicalAddress(volatile void *object) const {
+            return PERIPHERALS_PHYS_BASE + (reinterpret_cast<uint64_t>(object) - reinterpret_cast<uint64_t>(peripherals));
         }
-        inline uint32_t GetVirtualAddress(uint32_t offset) const {
-            return reinterpret_cast<uint32_t>(peripherals) + offset;
+        inline uint64_t GetVirtualAddress(uint64_t offset) const {
+            return reinterpret_cast<uint64_t>(peripherals) + offset;
         }
-        inline static uint32_t GetVirtualBaseAddress() {
+        inline static uint64_t GetVirtualBaseAddress() {
             return (bcm_host_get_peripheral_size() == BCM2838_PERI_VIRT_BASE) ? BCM2838_PERI_VIRT_BASE : bcm_host_get_peripheral_address();
         }
         inline static float GetClockFrequency() {
@@ -191,15 +191,15 @@ class AllocatedMemory
         AllocatedMemory(const AllocatedMemory &) = delete;
         AllocatedMemory(AllocatedMemory &&) = delete;
         AllocatedMemory &operator=(const AllocatedMemory &) = delete;
-        inline uint32_t GetPhysicalAddress(volatile void *object) const {
-            return (memSize) ? memAddress + (reinterpret_cast<uint32_t>(object) - reinterpret_cast<uint32_t>(memAllocated)) : 0x00000000;
+        inline uint64_t GetPhysicalAddress(volatile void *object) const {
+            return (memSize) ? memAddress + (reinterpret_cast<uint64_t>(object) - reinterpret_cast<uint64_t>(memAllocated)) : 0x00000000;
         }
-        inline uint32_t GetAddress() const {
-            return reinterpret_cast<uint32_t>(memAllocated);
+        inline uint64_t GetAddress() const {
+            return reinterpret_cast<uint64_t>(memAllocated);
         }
     private:
         unsigned memSize, memHandle;
-        uint32_t memAddress;
+        uint64_t memAddress;
         void *memAllocated;
         int mBoxFd;
 };
@@ -220,7 +220,7 @@ class Device
 class ClockDevice : public Device
 {
     public:
-        ClockDevice(uint32_t clockAddress, unsigned divisor) {
+        ClockDevice(uint64_t clockAddress, unsigned divisor) {
             clock = reinterpret_cast<ClockRegisters *>(peripherals->GetVirtualAddress(clockAddress));
             clock->ctl = (0x5a << 24) | 0x06;
             std::this_thread::sleep_for(std::chrono::microseconds(1000));
@@ -239,11 +239,11 @@ class ClockOutput : public ClockDevice
     public:
 #ifndef GPIO21
         ClockOutput(unsigned divisor) : ClockDevice(CLK0_BASE_OFFSET, divisor) {
-            output = reinterpret_cast<uint32_t *>(peripherals->GetVirtualAddress(GPIO_BASE_OFFSET));
+            output = reinterpret_cast<uint64_t *>(peripherals->GetVirtualAddress(GPIO_BASE_OFFSET));
             *output = (*output & 0xffff8fff) | (0x04 << 12);
 #else
         ClockOutput(unsigned divisor) : ClockDevice(CLK1_BASE_OFFSET, divisor) {
-            output = reinterpret_cast<uint32_t *>(peripherals->GetVirtualAddress(GPIO_BASE_OFFSET + 0x08));
+            output = reinterpret_cast<uint64_t *>(peripherals->GetVirtualAddress(GPIO_BASE_OFFSET + 0x08));
             *output = (*output & 0xffffffc7) | (0x02 << 3);
 #endif
         }
@@ -257,11 +257,11 @@ class ClockOutput : public ClockDevice
         inline void SetDivisor(unsigned divisor) {
             clock->div = (0x5a << 24) | (0xffffff & divisor);
         }
-        inline volatile uint32_t &GetDivisor() {
+        inline volatile uint64_t &GetDivisor() {
             return clock->div;
         }
     private:
-        volatile uint32_t *output;
+        volatile uint64_t *output;
 };
 
 class PWMController : public ClockDevice
@@ -281,7 +281,7 @@ class PWMController : public ClockDevice
         virtual ~PWMController() {
             pwm->ctl = 0x00000000;
         }
-        inline volatile uint32_t &GetFifoIn() {
+        inline volatile uint64_t &GetFifoIn() {
             return pwm->fifoIn;
         }
     private:
@@ -291,7 +291,7 @@ class PWMController : public ClockDevice
 class DMAController : public Device
 {
     public:
-        DMAController(uint32_t controllBlockAddress, unsigned dmaChannel) {
+        DMAController(uint64_t controllBlockAddress, unsigned dmaChannel) {
             dma = reinterpret_cast<DMARegisters *>(peripherals->GetVirtualAddress((dmaChannel < 15) ? DMA0_BASE_OFFSET + dmaChannel * 0x100 : DMA15_BASE_OFFSET));
             dma->ctlStatus = (0x01 << 31);
             std::this_thread::sleep_for(std::chrono::microseconds(1000));
@@ -302,10 +302,10 @@ class DMAController : public Device
         virtual ~DMAController() {
             dma->ctlStatus = (0x01 << 31);
         }
-        inline void SetControllBlockAddress(uint32_t address) {
+        inline void SetControllBlockAddress(uint64_t address) {
             dma->cbAddress = address;
         }
-        inline volatile uint32_t &GetControllBlockAddress() {
+        inline volatile uint64_t &GetControllBlockAddress() {
             return dma->cbAddress;
         }
     private:
@@ -416,7 +416,7 @@ void Transmitter::TransmitViaDma(WaveReader &reader, ClockOutput &output, unsign
         throw std::runtime_error("DMA channel number out of range (0 - 15)");
     }
 
-    AllocatedMemory allocated(sizeof(uint32_t) * (bufferSize) + sizeof(DMAControllBlock) * (2 * bufferSize) + sizeof(uint32_t));
+    AllocatedMemory allocated(sizeof(uint64_t) * (bufferSize) + sizeof(DMAControllBlock) * (2 * bufferSize) + sizeof(uint64_t));
 
     std::vector<Sample> samples = reader.GetSamples(bufferSize, stopped);
     if (samples.empty()) {
@@ -435,15 +435,15 @@ void Transmitter::TransmitViaDma(WaveReader &reader, ClockOutput &output, unsign
     unsigned i, cbOffset = 0;
 
     volatile DMAControllBlock *dmaCb = reinterpret_cast<DMAControllBlock *>(allocated.GetAddress());
-    volatile uint32_t *clkDiv = reinterpret_cast<uint32_t *>(reinterpret_cast<uint32_t>(dmaCb) + 2 * sizeof(DMAControllBlock) * bufferSize);
-    volatile uint32_t *pwmFifoData = reinterpret_cast<uint32_t *>(reinterpret_cast<uint32_t>(clkDiv) + sizeof(uint32_t) * bufferSize);
+    volatile uint64_t *clkDiv = reinterpret_cast<uint64_t *>(reinterpret_cast<uint64_t>(dmaCb) + 2 * sizeof(DMAControllBlock) * bufferSize);
+    volatile uint64_t *pwmFifoData = reinterpret_cast<uint64_t *>(reinterpret_cast<uint64_t>(clkDiv) + sizeof(uint64_t) * bufferSize);
     for (i = 0; i < bufferSize; i++) {
         float value = samples[i].GetMonoValue();
         clkDiv[i] = (0x5a << 24) | (0xffffff & (clockDivisor - static_cast<int>(round(value * divisorRange))));
         dmaCb[cbOffset].transferInfo = (0x01 << 26) | (0x01 << 3);
         dmaCb[cbOffset].srcAddress = allocated.GetPhysicalAddress(&clkDiv[i]);
         dmaCb[cbOffset].dstAddress = peripherals.GetPhysicalAddress(&output.GetDivisor());
-        dmaCb[cbOffset].transferLen = sizeof(uint32_t);
+        dmaCb[cbOffset].transferLen = sizeof(uint64_t);
         dmaCb[cbOffset].stride = 0;
         dmaCb[cbOffset].nextCbAddress = allocated.GetPhysicalAddress(&dmaCb[cbOffset + 1]);
         cbOffset++;
@@ -451,7 +451,7 @@ void Transmitter::TransmitViaDma(WaveReader &reader, ClockOutput &output, unsign
         dmaCb[cbOffset].transferInfo = (0x01 << 26) | (0x05 << 16) | (0x01 << 6) | (0x01 << 3);
         dmaCb[cbOffset].srcAddress = allocated.GetPhysicalAddress(pwmFifoData);
         dmaCb[cbOffset].dstAddress = peripherals.GetPhysicalAddress(&pwm.GetFifoIn());
-        dmaCb[cbOffset].transferLen = sizeof(uint32_t) * PWM_WRITES_PER_SAMPLE;
+        dmaCb[cbOffset].transferLen = sizeof(uint64_t) * PWM_WRITES_PER_SAMPLE;
         dmaCb[cbOffset].stride = 0;
         dmaCb[cbOffset].nextCbAddress = allocated.GetPhysicalAddress((i < bufferSize - 1) ? &dmaCb[cbOffset + 1] : dmaCb);
         cbOffset++;
